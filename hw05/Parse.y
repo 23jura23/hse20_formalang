@@ -19,18 +19,20 @@ import Text.Printf
 %%
 
 Program : Expr             { Program $1 }
-     | Expr Program        { $1 :~ $2 }
+        | Expr Program     { $1 :~ $2   }
 
-Expr : Head '.'         { Expr $1 }
-     | Head ts Disj '.' { $1 :- $3  }
+Expr : w '.'              { Expr (Head $ HId $ word $1) }
+     | w Head '.'         { Expr (HId (word $1) :@ $2)  }
+     | w ts Disj '.'      { Head (HId $ word $1) :- $3  }
+     | w Head ts Disj '.' { HId (word $1) :@ $2 :- $4   }
 
 Head : HId              { Head $1  }
      | HId Head         { $1 :@ $2 }
 
-HId  : w                { HId (word $1) }
-     | '(' Head ')'     { HBr $2 }
+HId  : w                { HId (word $1)             }
+     | '(' w Head ')'   { HBr (HId (word $2) :@ $3) }
 
-Disj : Conj             { Disj $1    }
+Disj : Conj             { Disj $1   }
      | Conj ';' Disj    { $1 :| $3  }
 
 Conj : Atom             { Conj $1   }
@@ -39,8 +41,8 @@ Conj : Atom             { Conj $1   }
 Atom : Id               { Atom $1   }
      | Id Atom          { $1 :@@ $2 }
 
-Id   : w                { Id (word $1)    }
-     | '(' Disj ')'     { Br $2     }
+Id   : w                { Id (word $1) }
+     | '(' Disj ')'     { Br $2        }
 
 {
 
