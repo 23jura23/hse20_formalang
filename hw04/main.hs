@@ -1,6 +1,8 @@
 module Main where
 import Data.Maybe
 import Text.Printf
+import System.Environment
+import System.IO
 import Lex
 
 -- G -> L | LG
@@ -65,13 +67,24 @@ parseError e = printf "Syntax error at word \"%s\": line %d, colon %d"  w l c
                                       Error   w p -> (w   , getPos p)
                                    where getPos (AlexPn _ l c) = (l, c)
 
+main' s = let tokens = alexScanTokens s in
+             case getLexemError tokens of
+                 Just e  -> parseError e
+                 Nothing -> case parseG tokens of
+                                 (True, []) -> "Correct syntax"
+                                 (False, ts) -> printf "Incorrect syntax. %s" e
+                                                 where e = case ts of [] -> "Tokens list is empty. Perhaps some lexem is missing"
+                                                                      (t:_) -> parseError t
+  
+
 main = do
-        s <- getContents
-        putStrLn $ let tokens = alexScanTokens s in
-                   case getLexemError tokens of
-                        Just e  -> parseError e
-                        Nothing -> case parseG tokens of
-                                        (True, []) -> "Correct syntax"
-                                        (False, ts) -> printf "Incorrect syntax. %s" e
-                                                        where e = case ts of [] -> "Tokens list is empty. Perhaps some lexem is missing"
-                                                                             (t:_) -> parseError t
+        args <- getArgs
+        case length args of
+            0 -> putStr $ unlines ["Usage:", "Read from file: ./main -f filename", "Read from stdin: ./main -s"]
+            1 -> case head args of
+                    "-s" -> getContents >>= putStrLn . main' 
+                    _    -> putStrLn "Wrong arguments"
+            2 -> case head args of
+                    "-f" -> openFile (args !! 1) ReadMode >>= hGetContents >>= putStrLn . main'
+                    _    -> putStrLn "Wrong arguments"
+            _ -> putStrLn "Wrong arguments"
