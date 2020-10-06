@@ -29,8 +29,8 @@ Expr : w '.'              { Expr (Head $ HId $ word $1) }
 Head : HId              { Head $1  }
      | HId Head         { $1 :@ $2 }
 
-HId  : w                { HId (word $1)             }
-     | '(' w Head ')'   { HBr (HId (word $2) :@ $3) }
+HId  : w                { HId (word $1) }
+     | '(' Head ')'     { HBr $2        }
 
 Disj : Conj             { Disj $1   }
      | Conj ';' Disj    { $1 :| $3  }
