@@ -21,28 +21,25 @@ import Text.Printf
 Program : Expr             { Program $1 }
         | Expr Program     { $1 :~ $2   }
 
-Expr : w '.'              { Expr (Head $ HId $ word $1) }
-     | w Head '.'         { Expr (HId (word $1) :@ $2)  }
-     | w ts Disj '.'      { Head (HId $ word $1) :- $3  }
-     | w Head ts Disj '.' { HId (word $1) :@ $2 :- $4   }
+Expr : Atom '.'         { Expr $1 }
+     | Atom ts BrAst(Disj) '.' { $1 :- $3  }
 
-Head : HId              { Head $1  }
-     | HId Head         { $1 :@ $2 }
+Disj : BrAst(Conj)             { Disj $1   }
+     | BrAst(Conj) ';' AddBr(Disj)    { $1 :| $3  }
 
-HId  : w                { HId (word $1) }
-     | '(' Head ')'     { HBr $2        }
+Conj : BrAst(Atom)             { Conj $1   }
+     | BrAst(Atom) ',' AddBr(Conj)    { $1 :& $3  }
 
-Disj : Conj             { Disj $1   }
-     | Conj ';' Disj    { $1 :| $3  }
+Atom : Id             { Atom $1  }
+     | Id AddBr(Atom)   { $1 :@ $2 }
 
-Conj : Atom             { Conj $1   }
-     | Atom ',' Conj    { $1 :& $3  }
+AddBr(t) : BrAst(t)        { AddBr $1 }
+         | BrAst(t) AddBr(t) { $1 :@@ $2 }
 
-Atom : Id               { Atom $1   }
-     | Id Atom          { $1 :@@ $2 }
+BrAst(t)  : t                { NoBr $1}
+          | '(' BrAst(t) ')' {   Br $2}
 
 Id   : w                { Id (word $1) }
-     | '(' Disj ')'     { Br $2        }
 
 {
 
@@ -62,72 +59,83 @@ parseError (e:_) = error $ printf "Syntax error at word \"%s\": line %d, colon %
 
 data Program = Program Expr
              | Expr :~ Program
+             deriving Show
 
-data Expr = Expr Head
-          | Head :- Disj
+data Expr = Expr Atom
+          | Atom :- BrAst Disj
+          deriving Show
 
-data Head = Head HId 
-          | HId :@ Head
+data Disj = Disj (BrAst Conj)
+          | BrAst Conj :| AddBr Disj
+          deriving Show
 
-data HId  = HId String
-          | HBr Head
+data Conj = Conj (BrAst Atom)
+          | BrAst Atom :& AddBr Conj
+          deriving Show
 
-data Disj = Disj Conj
-          | Conj :| Disj
+data Atom = Atom Id 
+          | Id :@ AddBr Atom
+          deriving Show
 
-data Conj = Conj Atom
-          | Atom :& Conj
+data AddBr t = AddBr (BrAst t)
+             | BrAst t :@@ AddBr t
+             deriving Show
 
-data Atom = Atom Id
-          | Id :@@ Atom
+-- data BrAtom = BrAtom (BrAst Atom)
+--             | BrAst Atom :@@ BrAtom
+--             deriving Show
 
-data Id   = Id String
-          | Br Disj 
+data Id  = Id String
+         deriving Show
+
+data BrAst t = NoBr t
+             | Br (BrAst t)
+             deriving Show
 
 tabRight n = unlines . map ((replicate n ' ' ++ "| ") ++ ) . lines
 addBlock s t = prefix ++ (tabRight n t)
                where prefix = s ++ " |\n"
                      n = (length prefix) - 2
 
-instance Show Program where
-    show t = addBlock "Program" $ show' t
-        where show' (Program t) = show t
-              show' (e :~ t) = show e ++ "\n" ++ show' t
-
-instance Show Expr where
-    show (Expr head)    = show head
-    show (head :- body) = addBlock "Turnstile" $ show head ++ "\n" ++ show body
-
-instance Show Head where
-    show s = addBlock "Head" $ show' s
-             where show' (Head s) = show s
-                   show' (s :@ ss) = show s ++ "\n" ++ show' ss
-
-instance Show HId where
-    show (HId s) = s
-    show (HBr d) = addBlock "Brackets" $ "Left bracket" ++ "\n\n" ++ show d ++ "\n\n" ++ "Right bracket"
-
-instance Show Disj where
-    show s = addBlock "Body" $ show' s
-        where show' (Disj s) = show s
-              show' s = addBlock "Disjunction" $ show'' s
-                   where show'' (Disj s) = show s
-                         show'' (s :| ss) = show s ++ "\n" ++ show'' ss
-
-instance Show Conj where
-    show (Conj s) = show s
-    show s        = addBlock "Conjunction" $ show' s
-                    where show' (Conj s) = show s
-                          show' (s :& ss) = show s ++ "\n" ++ show' ss
-
-instance Show Atom where
-    show (Atom s) = show s
-    show s        = addBlock "Atom" $ show' s
-                    where show' (Atom s) = show s
-                          show' (s :@@ ss) = show s ++ "\n" ++ show' ss
-
-instance Show Id where
-    show (Id s) = s
-    show (Br d) = addBlock "Brackets" $ "Left bracket" ++ "\n\n" ++ show d ++ "\n\n" ++ "Right bracket"
+-- instance Show Program where
+--     show t = addBlock "Program" $ show' t
+--         where show' (Program t) = show t
+--               show' (e :~ t) = show e ++ "\n" ++ show' t
+-- 
+-- instance Show Expr where
+--     show (Expr head)    = show head
+--     show (head :- body) = addBlock "Turnstile" $ show head ++ "\n" ++ show body
+-- 
+-- instance Show Head where
+--     show s = addBlock "Head" $ show' s
+--              where show' (Head s) = show s
+--                    show' (s :@ ss) = show s ++ "\n" ++ show' ss
+-- 
+-- instance Show HId where
+--     show (HId s) = s
+--     show (HBr d) = addBlock "Brackets" $ "Left bracket" ++ "\n\n" ++ show d ++ "\n\n" ++ "Right bracket"
+-- 
+-- instance Show Disj where
+--     show s = addBlock "Body" $ show' s
+--         where show' (Disj s) = show s
+--               show' s = addBlock "Disjunction" $ show'' s
+--                    where show'' (Disj s) = show s
+--                          show'' (s :| ss) = show s ++ "\n" ++ show'' ss
+-- 
+-- instance Show Conj where
+--     show (Conj s) = show s
+--     show s        = addBlock "Conjunction" $ show' s
+--                     where show' (Conj s) = show s
+--                           show' (s :& ss) = show s ++ "\n" ++ show' ss
+-- 
+-- instance Show Atom where
+--     show (Atom s) = show s
+--     show s        = addBlock "Atom" $ show' s
+--                     where show' (Atom s) = show s
+--                           show' (s :@ ss) = show s ++ "\n" ++ show' ss
+-- 
+-- instance Show Id where
+--     show (Id s) = s
+--     show (Br d) = addBlock "Brackets" $ "Left bracket" ++ "\n\n" ++ show d ++ "\n\n" ++ "Right bracket"
  
 }
