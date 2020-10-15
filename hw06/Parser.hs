@@ -37,7 +37,13 @@ comma = Token.reservedOp lexer ","
 -- eta reduction of third argument
 binary name fun = Infix (do { Token.reservedOp lexer name; return fun })
 
--- Program and parseString --
+-- parseString --
+
+parseString :: Parser a -> String -> Either ParseError a
+parseString a =
+  parse (do r <- a; eof; return r) ""
+
+-- Program --
 
 program = try $ do
     whiteSpace
@@ -45,10 +51,6 @@ program = try $ do
     types      <- many typedef
     relations  <- many relation
     return (Program moduleName types relations)
-
-parseString :: String -> Either ParseError Program
-parseString =
-  parse (do r <- program; eof; return r) ""
 
 -- identifier --
 
