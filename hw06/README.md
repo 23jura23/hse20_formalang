@@ -1,4 +1,4 @@
-# Parser generator based Prolog Parser
+# Parser Combinator based Prolog Parser
 
 A studying parser of a simplified version of Prolog. Implemented using Parsec (Parser Combinator) in Haskell
 
