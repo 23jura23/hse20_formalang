@@ -71,4 +71,4 @@ instance Show Type where
     show (Arrow t1 t2) = addBlock "Arrow" $ showLnR t1 ++ show t2
 
 instance Show Program where
-    show (Program m ts rels) = addBlock "Program" $ maybe "" showLnR m ++ concatMap showLnR ts ++ concatMap showLnR rels
+    show (Program m ts rels) = addBlock "Program" $ maybe "" (addBlock "Module" . showLnR) m ++ addBlock "TypeDefs" (concatMap showLnR ts) ++ addBlock "Relations" (concatMap showLnR rels)
